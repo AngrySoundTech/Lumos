@@ -1,6 +1,12 @@
 ##
 # A simple script to generate a list of mods from jars in the directory
-# NOTE: This is not meant to be a perfect list until jars are named consitantly
+#
+# NOTE: For this to work correctly, mods MUST be named as follows:
+#         [TAG] Name-version.jar
+#
+#       Here are a few examples:
+#         [CLIENT] Armor Chroma-1.2-1.7.10.jar
+#         ClimateControl-0.6.beta55.jar
 ##
 def getModsList
   mods = Dir["src/mods/**/*.jar"]
@@ -11,15 +17,10 @@ def getModsList
     mod.gsub! /\.jar/, ''
 
     # Remove Version Numbers
-    mod.gsub! /(?:(\d+)\.)?(?:(\d+)\.)?(\*|\d+)/, ''
+    mod.gsub! /-.*$/, ''
 
     # Remove [TAGS]
-    mod.gsub! /\[.*\]/, ''
-
-    # Remove biddly bobs
-    mod.gsub! /\s/, ''
-    mod.gsub! /-|\.|_/, ''
-    mod.gsub! /\(\)/, ''
+    mod.gsub! /\[.*\]\s?/, ''
 
     mod[0] = mod[0].upcase
   }
@@ -28,5 +29,5 @@ def getModsList
 end
 
 if __FILE__ == $0
-    puts getModsList
+    puts getModsList.uniq
 end

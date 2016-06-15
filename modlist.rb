@@ -13,7 +13,7 @@ def getModsList
     # Remove Version Numbers
     mod.gsub! /(?:(\d+)\.)?(?:(\d+)\.)?(\*|\d+)/, ''
 
-    # Remove tags
+    # Remove [TAGS]
     mod.gsub! /\[.*\]/, ''
 
     # Remove biddly bobs

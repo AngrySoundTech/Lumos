@@ -25,9 +25,9 @@ def getModsList
     mod[0] = mod[0].upcase
   }
 
-  mods.sort
+  mods.sort.uniq
 end
 
 if __FILE__ == $0
-    puts getModsList.uniq
+    puts getModsList
 end

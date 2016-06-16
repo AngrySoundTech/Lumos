@@ -1,12 +1,27 @@
+###
+# This Rakefile is meant to ease modpack makers with a variety of useful functions including:
+#   * listing mods
+#   * Gathering permissions
+#   * Building separate client and server zips
+#
+# Caveats:
+#   Mod jars are expected to be named a certain way, with the basic format being mod-version.jar
+#   For example:
+#     buildcraft-7.1.16.jar
+#
+#   Additionally, tags are permitted for organization.
+#   For example:
+#     [THAUMCRAFT] Automagy-1.7.10-0.28.2.jar
+#   The [CLIENT] tag is special, and it will prevent the mod from being included in the server distribution
+###
 require 'rake/testtask'
 require 'net/http'
 require 'json'
-require 'pp'
 
 task :default => [:test]
 
-## CHANGE CONFIG THINGS HERE
-@source_directory = 'src' # Without trailing slash
+# Config
+@source_directory = 'src' # The "minecraft root", Without trailing slash
 
 task :list do
   @mods = Set.new
@@ -36,12 +51,6 @@ task :depends => [:list] do
   puts Mods.find('Balanced Exchange').authors
 end
 
-
-
-
-####
-## Classes are included in the Rakefile so it's one file.
-####
 class Mod
   def initialize(name,
                  short_name =      'Unknown',

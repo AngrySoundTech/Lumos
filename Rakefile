@@ -15,6 +15,7 @@
 #   The [CLIENT] tag is special, and it will prevent the mod from being included in the server distribution
 ###
 require 'rake/testtask'
+require 'rubygems'
 require 'net/http'
 require 'json'
 
@@ -23,7 +24,18 @@ task :default => [:test]
 # Config
 @source_directory = 'src' # The "minecraft root", Without trailing slash
 
-task :list do
+task :install do
+  # The Degenerate way to not need a Gemfile
+  begin
+    require 'zip'
+  rescue LoadError
+    `gem install rubyzip`
+    Gem.refresh
+    retry
+  end
+end
+
+task :list => [:install] do
   @mods = Set.new
 
   Dir["#{@source_directory}/mods/**/*.jar"].each { |mod|

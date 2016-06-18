@@ -3,21 +3,12 @@
 #   * listing mods
 #   * Gathering permissions
 #   * Building separate client and server zips
-#
-# Caveats:
-#   Mod jars are expected to be named a certain way, with the basic format being mod-version.jar
-#   For example:
-#     buildcraft-7.1.16.jar
-#
-#   Additionally, tags are permitted for organization.
-#   For example:
-#     [THAUMCRAFT] Automagy-1.7.10-0.28.2.jar
-#   The [CLIENT] tag is special, and it will prevent the mod from being included in the server distribution
 ###
 require 'rake/testtask'
 require 'rubygems'
 require 'net/http'
 require 'json'
+require 'pp'
 
 task :default => [:test]
 
@@ -38,29 +29,32 @@ end
 task :list => [:install] do
   @mods = Set.new
 
-  Dir["#{@source_directory}/mods/**/*.jar"].each { |mod|
-    # Remove path
-    mod.gsub! /#{@source_directory}\/mods\//, ''
-    mod.gsub! /1\.7\.10\//, ''
-    mod.gsub! /\.jar/, ''
+  # Dir["#{@source_directory}/mods/**/*.jar"].each { |mod|
+  #   # Remove path
+  #   mod.gsub! /#{@source_directory}\/mods\//, ''
+  #   mod.gsub! /1\.7\.10\//, ''
+  #   mod.gsub! /\.jar/, ''
+  #
+  #   # Remove Version Numbers
+  #   mod.gsub! /-.*$/, ''
+  #
+  #   # Remove [TAGS]
+  #   mod.gsub! /\[.*\]\s?/, ''
+  #
+  #   @mods.add(Mods.find mod)
+  # }
 
-    # Remove Version Numbers
-    mod.gsub! /-.*$/, ''
-
-    # Remove [TAGS]
-    mod.gsub! /\[.*\]\s?/, ''
-
-    @mods.add(Mods.find mod)
+  Dir["#{@source_directory}/mods/**/*.jar"].each { |jar_path|
+    @mods.add(Mods.find_mod jar_path)
   }
 
   if Rake.application.top_level_tasks.include? 'list'
-    puts @mods.map {|mod| mod = mod.name}.uniq
+    # puts @mods.map {|mod| mod = mod.name}.uniq
   end
 end
 
-task :depends => [:list] do
-  # So I don't forget how dependencies work
-  puts Mods.find('Balanced Exchange').authors
+task :test => [:install] do
+  PP.pp Mods.find_mod('src/mods/buildcraft-7.1.16.jar')
 end
 
 class Mod
@@ -94,15 +88,17 @@ class Mods
   response = Net::HTTP.get(uri)
   @permissions_hash = JSON.parse(response)
 
-  def self.find(name)
-    @permissions_hash.each { |entry|
-      if matches name, entry
-        return Mod.new(entry['modName'], entry['shortName'], entry['modids'], entry['modAuthors'], entry['modLink'],
-                       entry['privateStringPolicy'], entry['privateLicenceLink'],
-                       entry['publicStringPolicy'], entry['privateLicenceLink'])
+  def self.find_mod(path_to_jar)
+    Zip::File.open(path_to_jar) do |jar_file|
+      if (mcmod = jar_file.glob('mcmod.info').first)
+      # If there is an mcmod.info
+        json = JSON.parse(mcmod.get_input_stream.read.gsub /\n/, '')
+        build_mod nested_hash_value json, 'modid'
+      else
+      # If there isn't an mcmod.info
+        puts "#{path_to_jar} does not have an mcmod.info"
       end
-    }
-    return Mod.new(name) # Couldn't find info :(
+    end
   end
 
   private
@@ -112,6 +108,28 @@ class Mods
     entry_name = entry['modName'].gsub(/[^a-zA-Z]/, '').downcase
     entry_shortname = entry['shortName'].gsub(/[^a-zA-Z]/, '').downcase
     return name == entry_name || name == entry_shortname
+  end
+
+  def self.build_mod(modid)
+    @permissions_hash.each { |entry|
+      if entry['modids'].split(',').map(&:strip).include? modid
+        return Mod.new(entry['modName'], entry['shortName'], entry['modids'], entry['modAuthors'], entry['modLink'],
+                       entry['privateStringPolicy'], entry['privateLicenceLink'],
+                       entry['publicStringPolicy'], entry['privateLicenceLink'])
+      end
+    }
+    puts "#{modid} Is not in the database"
+    return Mod.new(modid.capitalize)
+  end
+
+  def self.nested_hash_value(obj,key)
+    if obj.respond_to?(:key?) && obj.key?(key)
+      obj[key]
+    elsif obj.respond_to?(:each)
+      r = nil
+      obj.find{ |*a| r=nested_hash_value(a.last,key) }
+      r
+    end
   end
 end
 
